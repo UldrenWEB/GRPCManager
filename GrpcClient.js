@@ -1,21 +1,21 @@
 import grpc from "@grpc/grpc-js";
 import protoLoader from "@grpc/proto-loader";
-import extractJSON from "../utils/extractJSON.js";
-import createServiceLogger from "../utils/logger.js";
-
-const config = extractJSON({ path: "../configs/grpcConfig.json" });
 
 class GrpcClient {
-  constructor({ protoBuffer, host }) {
+  constructor({ protoBuffer, host, config }) {
     this.packageDefinition;
     this.host = host;
     this.protoBuffer = protoBuffer;
     this.logger = createServiceLogger(host);
+    this.config = config;
     this.#loader();
   }
 
   #loader = () => {
-    this.packageDefinition = protoLoader.loadSync(this.protoBuffer, config);
+    this.packageDefinition = protoLoader.loadSync(
+      this.protoBuffer,
+      this.config
+    );
   };
 
   executeMethod = async ({
@@ -35,18 +35,7 @@ class GrpcClient {
       grpc.credentials.createInsecure()
     );
 
-    const theCallback = (error, response) => {
-      if (error) {
-        this.logger.error(`Error executing method ${method}: ${error.message}`);
-      } else {
-        this.logger.info(
-          `Method ${method} executed successfully: ${JSON.stringify(response)}`
-        );
-      }
-      callback(error, response);
-    };
-
-    const result = client[method]({ ...params }, theCallback);
+    const result = client[method]({ ...params }, callback);
 
     return result;
   };
